@@ -1,46 +1,68 @@
-<h1 align="center">MaxCoin挖礦機器人</h1>
+<h1 align="center">Max挖礦機器人</h1>
 
-This is a record of a trading mining robot project I have written by Python 3 during Dec in 2018. It applied an arbitrage strategy based on the trading mining system in cryptocurrecny market. 
+## 簡介
+這是一個基於位於台灣的虛擬貨幣交易所-[Max Exchange](https://max.maicoin.com/)，其交易挖礦機制所製作的自動套利交易機器人。
 
-It works on Max Exchange in Tawian and requires two accounts to operate. The target product is cryptocurrency (btc/usdt), please make sure you know the basic idea of it and understand the market changes frequently. 
+撰寫本文件的當下套利機會以不復存在，請停止機器人活動。但是交易功能依然存在，未來若是有類似的機會可修改此機器人以繼續進行交易。
 
-The project is no longer profitable and the robot has been stopped, so I put my code up here as a record.
-This robot is not fully completed yet, since the opportunity no longer exists faster than I expected, and I might not update this until I found another similar opportunity. But during the time, it could successfully make thousands of trades per days for nearly a month, and eventually made a 70% return.
-
-Here is the overview for the file:
-  account.ini should have your two accounts' api key and secret, also the two type of currency you are going to use
-  api.py provides the function to build the connection to exchange with Restful api
-  launch.py include a simple function to get your account's data
-  trade.py is the main script which will do the trade
-  main.py is the monitor to control the order flow. Run this to start the robot.
-
-
-This project works based on Max exchange, so it will face problem if it run on other exchange.
-The target product used in this project is btc/usdt. Other pairs should have similar result, but please be careful for the depth of the market.
-
-The profit can be split into two part - 1,Trading Reward and 2,Airdrop reward.
-
-1.Trading Reward.
-For any trade you made, the exchange will return certain degree of the fee you paid back to us through equivalent value of MAX coin. The amount of degree will decline as the difficulty of Mining increase, initially it was 60%.
-The fee we paid, will automatically be sold at market to buy Max coin with at the same time when the order is completed.
-
-2.Airdrop Reward
-At the end of the day, the exchange will return 80% of its net fee profit back to the user by Max coin. For each user, it will return 40% of the total fee that trade made to maker and 10% to taker. The remain part will then go to holders, but it was then be decided by time-weight factor requiring you lock the money which is not suitable for our strategy, so I will not consider that in this project.
-In short, if you can become maker and taker at the same time, you can take 50% of total fee per trade back.
+## 安裝及使用
+此機器人使用Python 3.7.0於Windows 10版本1803。  
+並使用以下package－ requests, json, time, hmac, hashlib, base64, sys, random, configparser。   
+將本專案下列所述文件下載至同一資料夾即可使用。以下將說明各項文件: 
+* account.ini：儲存帳號api key & secret、使用者名稱、交易貨幣。
+* launch.py：提取account.ini資料的功能。
+* api.py：包含所有連結交易所api的功能。
+* trade.py：交易邏輯。
+* main.py：流程控制與功能串聯，運行本文件以開始機器人。
 
 
-So here is the strategy:
+使用流程如下:
+<ol>
+  <li>此交易機器人需要兩組Maxcoin交易所的帳號，並且需要申請交易所API。</li>
+  <li>請決定存在於交易所的一組交易對為目標，決定哪個是基準貨幣、哪個是交易貨幣，往後報價將以基準貨幣為主。</li>
+  <li>請於兩組帳號內分別存入等價的基準貨幣和交易貨幣。帳戶內沒錢或是太少機器人不能進行交易。</li>
+  <li>請在account.ini輸入一位使用者名稱，並且輸入兩組api key & secret ，並在base輸入基準貨幣(ex: usdt) 和 ex 輸入作為交易貨幣(ex: btc)。這裡建議base使用usdt，因為相對穩定，並且直觀。往後交易將以這個組合為標的，並且適用一般外匯的概念。買即買入ex賣出base，賣即賣出ex買入base。</li>
+  <li>啟動main.py，按照指示輸入即可開始機器人。</li>
+</ol>
 
-We become maker and taker at the same time, so for any trade we made, we will get 60% of the fee back in Max now and 50% back at end of the day.
-That will be 10% return for the fee we paid.
-Since the profit is based on "fee", we need to make thousands of trades to get an ideal profit. And while the trade goes on, the total amount of money will decline since only part of the fee were refund immediately. I have made an Excel chart to simulate the change of total fund and found out the marginal is diminishing. Therefore, I have chosen 1000~2000 as the number of the trade to do per day which provides relatively large profit but not too much trade to do. 
+## 交易邏輯
+此小節解說為何能夠獲利。細節請參考[Max 交易所白皮書。](https://assets.maicoin.com/max/max-token-whitepaper-zh-tw-12172018.pdf)
 
-Another important thing to consider is that MAX coin from trading reward will be bought at market order automatically after our trade done, so if the market do not have enough depth (it is), it will push up the Max price and increase our cost of MAX.
-We can make a limit sell order of Max right after the reward arrive to solve this to provide some protection. When the system going to buy at market, our order will then be executed and provide some depth to avoid the price pushing. To do this you have to remain some MAX at the end of the day.
-That is, we are taking the order buy ourselves (system buy at market <-> sell at limit, and the amount system bought will return to us).
+交易基於Max交易所的交易挖礦和分紅機制進行，具體來說有以下規則：
+* 每筆交易Maker收取0.05%手續費，Taker 0.15%。
+* 交易挖礦－交易完成當下，以交易所自己的貨幣（max）返還一部份付出的手續費。比例隨產出的max而遞減，起始值為60%。
+* 於每天00:30結算前日所有交易，並且以等價max返回一部份所完成的交易的手續費。Maker 40%，Taker 10 %。
 
-Besides, since we have to sell the all the max at the end of the day, Max coin will face a dramatic pressure of selling, and we will be lose some part of revenue if the price falling down. Luckily, it seems that there is an official protection of the price, Max coin generally holds at 0.081(max/usdt). This is the prerequisite of our strategy, once it no longer holds please stop the system immediately.
+假設在同個價位進行買賣，並同時擔任買賣方，即可實行套利。以下為範例：
 
-by Michael, 2018/12/21
+set btc/usdt = 8000 ， 並假設返還的max直接轉換成等價usdt  
+若發生一筆 1btc limit sell at 8000的交易 (同時有一筆1 btc market buy 的單，並在8000成交)，整體手續費變化如下 
 
-(2019/04/10 updated)
+1 * 8000 * 0.05% = 4 (Maker fee)  
+8000 * 0.15% = 12 (Taker fee) 
+Total fee =16 
+交易當下返還60% fee = 16 * 60% = 9.6  
+結算時返還 
+16 * 0.4 = 6.4 (Maker)  
+16 * 0.1 = 1.6 (Taker)  
+
+全部總和
+-16 + 9.6 + 6.4 + 1.6 = 1.6  此數值及為套利利潤。
+
+## 注意事項
+投資理財有賺有賠，而虛擬貨幣更是高風險產業。以下包含但不限使用時應須考量的注意事項。
+* 現今由於手續費回饋從60%下降到50%，因此已不存在利潤空間。
+* 這是基於手續費的套利，因此需要大量的交易筆數才能達到一定利潤。建議1000~2000筆左右。
+* 若是無法在同價位進行交易，會造成小額虧損。
+* 由於不斷地付出手續費，總帳戶金額會不斷減少，直到清晨結算才會恢復。
+* 當下返還的max須立即賣出，有利於複利及減少波動風險。
+* 當下返還的max具體是交易所將收到手續費於市場現貨賣出(買入max) 得到的。由於是系統自動執行，可以利用此機制將手上max用較好的價格出清。
+* 清晨返還的max存在大量出貨暴跌的風險。不過可以儲存一些隔日利用第五點的規則出清。
+* 交易所有護盤的傾向，具體來說是 max/usdt 護在 0.081。(現已不適用)
+* 由於此交易所是淺碟市場，交易所有造市機器人。但是快市時有機會當掉，此時請立即中止交易。也因此為防價格偏差，價使用其他大型交易所的。
+* 有被惡意攻擊的風險，因此在價格和數量都使用隨機值。
+
+> 過去的交易紀錄
+<p align="center">
+  <img src="https://raw.githubusercontent.com/kuei0221/Max-Mining/master/trade_record.png" width=80%>
+</p>
