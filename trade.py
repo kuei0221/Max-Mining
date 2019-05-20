@@ -2,7 +2,7 @@ from api import quote, refer_price
 import random
 import time
 
-# create a dict of current account status
+# create a dict of both current account status
 
 
 def overview(account1, account2, ex, base):
@@ -17,14 +17,15 @@ def overview(account1, account2, ex, base):
     return dict({base: base_total, ex: ex_total,
                 "max": max_total, "overall": overall})
 
-# main trade operation function
+# create main trade operation function
 
 
 def trade(account1, account2, ex, base, N):
 
     pair = f"{ex}{base}"
     max_base = f"max{base}"
-
+    
+    # Set Initial account to buy and to sell
     if account1.currency_holding(ex)["balance"] > account2.currency_holding(ex)["balance"]:
         ac_sell = account1
         ac_buy = account2
@@ -33,20 +34,24 @@ def trade(account1, account2, ex, base, N):
         ac_sell = account2
 
     # Since the exchange made the max/usdt price hold at 0.081 at this point, the variable is locked by constant
+    # The following code might use if the price no longer holds or the product are changed
     # max_order_price = quote(max_base)["bid"] + 1e-3
     max_order_price = 0.081
-
+    
+    # Place Initial max order
     [account.create_order(
         market=max_base, side="sell", ord_type="limit",
         volume=float(account.currency_holding("max")["balance"]),
         price=max_order_price)
         for account in [ac_buy, ac_sell]
         if float(account.currency_holding("max")["balance"]) > 10]
-
+    
+    # Trade N times with n rolling
     n = 0
     while n < N:
 
         print(f"Start of {n} trade")
+        #Use Refer price as target price, and it should be between the bid and ask price in Max exchange
         try:
 
             price_from_max = quote(pair)
@@ -75,7 +80,7 @@ def trade(account1, account2, ex, base, N):
             time.sleep(3)
             continue
 
-        print("Placing Orders")
+        print("Place Sell Orders")
         try:
             order_sell = ac_sell.create_order(
                 market=pair, side="sell", ord_type="limit",
@@ -88,27 +93,14 @@ def trade(account1, account2, ex, base, N):
             time.sleep(3)
             continue
 
-        while(1):
-            try:
-                if quote(pair)["ask"] == price:
-
-                    print("Place Main Exchange Order")
-                    order_buy = ac_buy.create_order(
-                        market=pair, side="buy", ord_type="market",
-                        volume=volume, stop_price=price * 0.98)
-                    id_buy = order_buy["id"]
-
-                    if volume_base > volume_ex:
-                        print("Place Rebalance Order")
-                        print(volume_base)
-                        print(volume_ex)
-                        remain_base = float(ac_buy.currency(base)["balance"]) / price
-                        print(remain_base)
-                        # ac_buy.order(market = pair, side = "buy", ord_type = "market",
-                        # volume = round(remain_base * 0.99, 6), stop_price = price * 0.98)
-                        del remain_base
-                    break
-            except:
+        print("Place Buy Orders")
+        try:
+            if quote(pair)["ask"] == price:
+                order_buy = ac_buy.create_order(
+                    market=pair, side="buy", ord_type="market",
+                    volume=volume, stop_price=price * 0.98)
+                id_buy = order_buy["id"]
+        except:
                 continue
         del order_sell, order_buy, price, volume_base, volume_ex
 
@@ -138,7 +130,7 @@ def trade(account1, account2, ex, base, N):
         print("Placing New Max orders")
 
         [account.create_order(
-            market=max_base, side="sell, ord_type="limit",
+            market=max_base, side="sell", ord_type="limit",
             volume=float(account.currency_holding("max")["balance"]),
             price=max_order_price)
             for account in [ac_buy, ac_sell]
