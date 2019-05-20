@@ -1,4 +1,4 @@
-Greeting.
+<h1 align="center">MaxCoin挖礦機器人</h1>
 
 This is a record of a trading mining robot project I have written by Python 3 during Dec in 2018. It applied an arbitrage strategy based on the trading mining system in cryptocurrecny market. 
 
